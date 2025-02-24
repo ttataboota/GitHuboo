@@ -34,7 +34,7 @@ user_data_zloa = []
 count=0
 
 
-user_names=user_names[300:500]
+user_names=user_names[500:700]
 
 # "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\chrome_dev"
 
