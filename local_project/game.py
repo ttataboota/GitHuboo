@@ -24,33 +24,38 @@ with open('./tft13-item.json','r',encoding='utf-8') as json_file:
 with open('./tft13-augments.json','r',encoding='utf-8') as json_file:
   data_dragon_augments=json.load(json_file)
 
-data_dragon=[data_dragon_trait,data_dragon_champion,data_dragon_item,data_dragon_augments]
-
+#현 시즌
+now_season=13
 
 #traits-특성 dic 만들기
 df=pd.DataFrame(data_dragon_trait['data'])
 df_eng_kor_traits=df.iloc[0:2,:]
 dic_eng_kor_traits={df_eng_kor_traits.iloc[0,i] : df_eng_kor_traits.iloc[1,i] for i in range (df_eng_kor_traits.shape[1]) }
+dic_eng_kor_traits = {key: value for key, value in dic_eng_kor_traits.items() if f'TFT{now_season}' in key}
 
 #champion-영웅 dic 만들기
 df=pd.DataFrame(data_dragon_champion['data'])
 df_eng_kor_champion=df.iloc[0:2,:]
 dic_eng_kor_champion={df_eng_kor_champion.iloc[0,i] : df_eng_kor_champion.iloc[1,i] for i in range (df_eng_kor_champion.shape[1]) }
+dic_eng_kor_champion = {key: value for key, value in dic_eng_kor_champion.items() if f'TFT{now_season}' in key}
+
 
 #item-아이템 dic 만들기
 df=pd.DataFrame(data_dragon_item['data'])
 df_eng_kor_item=df.iloc[0:2,:]
 dic_eng_kor_item={df_eng_kor_item.iloc[0,i] : df_eng_kor_item.iloc[1,i] for i in range (df_eng_kor_item.shape[1]) }
+dic_eng_kor_item = {key: value for key, value in dic_eng_kor_item.items() if f'TFT{now_season}' in key}
 
 #augments-특성 dic 만들기
 df=pd.DataFrame(data_dragon_augments['data'])
 df_eng_kor_augments=df.iloc[0:2,:]
 dic_eng_kor_augments={df_eng_kor_augments.iloc[0,i] : df_eng_kor_augments.iloc[1,i] for i in range (df_eng_kor_augments.shape[1]) }
+dic_eng_kor_augments = {key: value for key, value in dic_eng_kor_augments.items() if f'TFT{now_season}' in key}
 
 
 # 챔프 사용 여부 df 만들기
 
-df_champ_usage=pd.DataFrame(columns=df_eng_kor_champion.columns)
+df_champ_usage=pd.DataFrame(columns=list(dic_eng_kor_champion.keys()))  
 for i in range(len(game_df['units'])):
   units=[]
   for j in range(len(game_df['units'][i])):
@@ -159,6 +164,19 @@ def only_kmean_n(df_champ_usage):
   plt.plot(range(10, 40), wcss)
   plt.show()
 
+def pca_95_kmean(k,df_champ_usage):
+  pca = PCA(n_components=0.95, random_state=42)
+  pca.fit_transform(df_champ_usage)
+  pca.fit(df_champ_usage)
+  pca_champ_usage=pca.transform(df_champ_usage)
+  kmeans = KMeans(n_clusters=k, init='k-means++', max_iter=300, n_init=10, random_state=0)
+  pca_champ_kmean = kmeans.fit(pca_champ_usage)
+
+  df_champ_usage['class']=pca_champ_kmean.labels_
+  game_df['class']=pca_champ_kmean.labels_
+
+  deck=df_champ_usage.groupby('class').sum()
+  return deck
 
 def pca_kmean(p,k,df_champ_usage):
   pca = PCA(n_components=p)
@@ -167,15 +185,24 @@ def pca_kmean(p,k,df_champ_usage):
   kmeans = KMeans(n_clusters=k, init='k-means++', max_iter=300, n_init=10, random_state=0)
   pca_champ_kmean = kmeans.fit(pca_champ_usage)
 
+  df_champ_usage['class']=pca_champ_kmean.labels_
   game_df['class']=pca_champ_kmean.labels_
+
   deck=df_champ_usage.groupby('class').sum()
   return deck
 
 
 
 def deck_maker(deck,n):
+
+  deck.rename(columns=dic_eng_kor_champion, inplace=True)
   return deck.iloc[n,:].sort_values(ascending=False)
 
-#def deck_rank(deck):
-   #return pd.DataFrame(game_df).groupby('class').agg({'placement': ['mean', 'var']}).sort_values(by=('placement','mean'))
+
+
+def deck_rank(game_df):
+   return game_df.groupby('class').agg({'placement': ['mean', 'var']}).sort_values(by=('placement','mean'))
    
+
+
+
