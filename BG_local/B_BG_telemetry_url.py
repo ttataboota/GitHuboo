@@ -50,5 +50,5 @@ for i in match_id:
 
 
 telemetry_url_data=pd.DataFrame(telemetry_url_list,columns=['telemetry_url'])
-telemetry_url_data.to_csv("telemetry_url_data.csv", index=False)
+telemetry_url_data.to_csv("data/telemetry_url_data.csv", index=False)
 

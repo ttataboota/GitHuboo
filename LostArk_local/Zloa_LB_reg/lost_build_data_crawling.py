@@ -18,8 +18,7 @@ from playwright.sync_api import sync_playwright
 import time
 import pandas as pd
 
-
-# 세션 객체 사용
+# 세션을 사용하면 세션이 유지된 상태에서 주소만 바꿔서 가져온다!!
 with requests.Session() as session:
     user_names = list(chain.from_iterable(
         [name['name'] for name in json.loads(session.get(
@@ -28,25 +27,17 @@ with requests.Session() as session:
     ))
 
 
-
+# 나오는 데이터 ex) 42억 3560만 -> 42.35 바꾸기
 def convert_number(text: str) -> int:
-    # 공백 제거(혹은 공백 허용 정규식 사용)
     text = text.replace(" ", "")  
-    
-    # 정규식 패턴: (억), (만), (나머지 숫자)
     pattern = r'(?:(\d+)억)?(?:(\d+)만)?(\d+)?'
     match = re.match(pattern, text)
 
     if not match:
-        # 매칭 안 되면 0이나 에러 처리
         return 0
-
-    # None 방지
     eok = match.group(1) or "0"  # 억
     man = match.group(2) or "0"  # 만
     rest = match.group(3) or "0" # 나머지 숫자
-
-    # 정수 변환 후 계산
     eok_val = int(eok) * 100000000
     man_val = int(man) * 10000
     rest_val = int(rest)
@@ -59,22 +50,21 @@ def convert_number(text: str) -> int:
 
 
 
-# 크롬 옵션 설정 (필요 시 추가 옵션 사용 가능)
+# 크롬 옵션 설정
 chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument('--headless') 
+chrome_options.add_argument('--headless')  # 이거 해두면 창 안보임
 
-# ChromeDriverManager를 사용해 크롬 드라이버를 자동 설치/업데이트
+
 service = Service(ChromeDriverManager().install())
-
-# 위에서 설정한 service와 옵션을 사용하여 드라이버 생성
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 
 
 user_data_damage=[]
 
+
+
 for name in user_names:
-    # LostBuilds 웹사이트 열기
     url = f'https://lostbuilds.com/info/{name}'
     driver.get(url)
     time.sleep(2)
@@ -91,5 +81,5 @@ driver.quit()
 
 user_data_damage_df=pd.DataFrame(user_data_damage,columns=['user_name','user_damage'])
 
-user_data_damage_df.to_csv('user_data_damage3.csv',index=False,encoding="utf-8-sig")
+user_data_damage_df.to_csv('data/user_data_damage3.csv',index=False,encoding="utf-8-sig")
 

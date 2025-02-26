@@ -15,7 +15,7 @@ from kneed import KneeLocator
 
 
 #게임 불러오기 새 데이터 나올시 수정!
-main_df = pd.read_feather('./master_game_Data.feather')
+main_df = pd.read_feather('data/master_game_Data.feather')
 game_df=main_df.copy()
 
 
@@ -33,7 +33,7 @@ class Data_Dragon:
       
     def load_data(self):
       for key, filename in self.json_files.items():
-        with open(filename, 'r', encoding='utf-8') as json_file:
+        with open(f"data/{filename}", 'r', encoding='utf-8') as json_file:
             self.data_dragon[key] = json.load(json_file)
 
     def gen_dic_eng_kor(self):
@@ -197,7 +197,7 @@ class DA:
 
     self.df_champ_usage['class']=pca_champ_kmean.labels_
     self.game_df['class']=pca_champ_kmean.labels_
-    self.df_champ_usage.columns = self.df_champ_usage.columns.map(lambda col: self.dic_eng_kor['champion'].get(col, col))
+    # self.df_champ_usage.columns = self.df_champ_usage.columns.map(lambda col: self.dic_eng_kor['champion'].get(col, col))
     self.df_champ_usage['placement']=self.game_df['placement']
 
 
@@ -246,10 +246,13 @@ class DA:
 
 
 season13_user_df=get_User_df(game_df,13) #시즌 13 유저데이터 생성
-  
+print("1")
 Data_An=DA(game_df,season13_user_df['champ'],season13_user_df['item']) # 유저데이터 분석 준비
+print("2")
+# slope_data=Data_An.four_slope() # 기울기 데이터로 k 값 생성 후 클래스 구분
+Data_An.auto_pca_kmean()
 
-slope_data=Data_An.four_slope() # 기울기 데이터로 k 값 생성 후 클래스 구분
+
 
 df_champ_usage=Data_An.get_df_champ_usage()
 df_item_champ_usage=Data_An.get_df_item_champ_usage()
@@ -257,10 +260,13 @@ game_df=Data_An.get_game_df()
 
 
 
-df_item_champ_usage.to_csv("slope_df_item_champ_usage.csv", index=True, encoding="utf-8-sig")
-df_champ_usage.to_csv("slope_df_champ_usage.csv", index=False, encoding="utf-8-sig")
-game_df.to_csv("slope_game_df.csv", index=False, encoding="utf-8-sig")
+# df_item_champ_usage.to_csv("data/slope_df_item_champ_usage.csv", index=True, encoding="utf-8-sig")
+# df_champ_usage.to_csv("data/slope_df_champ_usage.csv", index=False, encoding="utf-8-sig")
+# game_df.to_csv("data/slope_game_df.csv", index=False, encoding="utf-8-sig")
 
+df_item_champ_usage.to_csv("data/sil_df_item_champ_usage.csv", index=True, encoding="utf-8-sig")
+df_champ_usage.to_csv("data/sil_df_champ_usage.csv", index=False, encoding="utf-8-sig")
+game_df.to_csv("data/sil_game_df.csv", index=False, encoding="utf-8-sig")
 
 class Visual_data:
   def __init__(self,df_champ_usage,df_item_champ_usage,dic_eng_kor):

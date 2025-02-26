@@ -283,7 +283,7 @@ def get_BG_data(telemetry_data,user_name):
                 # 🔹 공격 이벤트 (LogPlayerAttack)
                 if event["_T"] == "LogPlayerAttack":
                     attacker = event.get("attacker")
-                    if attacker and attacker.get("name") == TARGET_PLAYER:  # ✅ None 체크 추가
+                    if attacker and attacker.get("name") == TARGET_PLAYER: 
                         combat_logs_1.append({
                             "time": event["_D"],
                             "weapon": event.get("weapon", {}).get("itemId", "Unknown"),
@@ -292,7 +292,6 @@ def get_BG_data(telemetry_data,user_name):
                             
                         })
 
-                # 🔹 피해량 이벤트 (LogPlayerTakeDamage)
                 if event["_T"] == "LogPlayerTakeDamage":
                     attacker = event.get("attacker")
                     victim = event.get("victim")
@@ -306,8 +305,6 @@ def get_BG_data(telemetry_data,user_name):
                             "weapon": event['damageCauserName']
                         })
 
-
-            # ✅ DataFrame 변환 후 분석
             df_combat_1 = pd.DataFrame(combat_logs_1)
             df_cleaner(df_combat_1)
             df_combat_2 = pd.DataFrame(combat_logs_2)
@@ -327,33 +324,13 @@ def get_BG_data(telemetry_data,user_name):
 
 
 data=get_BG_data(telemetry_data,get_user_name(telemetry_data))
+data_all = pd.concat(data, ignore_index=True)  
 
-data_all = pd.concat(data, ignore_index=True)  # ✅ 한 번에 병합
 
-data_all
 
-data_all.to_csv("data_all_random3.csv", index=False)
+data_all.to_csv("data/data_all_random3.csv", index=False)
 
 
 #%%
 
-# import matplotlib.pyplot as plt
 
-# plt.figure(figsize=(18, 6))
-
-# # 🔹 Boxplot 생성
-# data_all.boxplot(column='hit', by='weapon', grid=False, vert=True, patch_artist=True)
-
-# # 그래프 설정
-# plt.title("Hit Distribution by Weapon", fontsize=14)
-# plt.suptitle("")  # 기본 제목 제거
-# plt.xlabel("Weapon", fontsize=12)
-# plt.ylabel("Hit Value", fontsize=12)
-
-# # X축 레이블 회전 및 크기 조정
-# plt.xticks(rotation=45, ha='right', fontsize=10)
-
-# # 그래프 출력
-# plt.show()
-
-# %%

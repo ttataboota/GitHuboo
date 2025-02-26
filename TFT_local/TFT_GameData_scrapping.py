@@ -101,7 +101,7 @@ def user_game_data(matchid):
 
   #저장
   game_data=game_data.reset_index(drop=True)
-  game_data.to_feather(f'./{tier}_game_data.feather')
+  game_data.to_feather(f'data/{tier}_game_data.feather')
   print(f"{tier}_game data 추출 완료")
 
   return game_data

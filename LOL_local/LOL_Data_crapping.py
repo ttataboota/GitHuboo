@@ -10,19 +10,19 @@ import cairosvg
 from io import BytesIO
 from PIL import Image
 
-# API KEY 설정
 API_KEY = "RGAPI-258f98e4-61f1-4943-87d5-ce263367c83a"
 HEADERS = {
     "X-Riot-Token": API_KEY
 }
 
-# SVG 파일을 PNG 이미지로 변환하는 함수
+# SVG>PNG
 def svg_to_png_image(svg_path, zoom=0.5):
     png_data = cairosvg.svg2png(url=svg_path)
     image = Image.open(BytesIO(png_data))
     return OffsetImage(image, zoom=zoom)
 
-# 에픽 몬스터 아이콘 로드
+
+
 epic_monster_icons = {
     'DRAGON': svg_to_png_image('dragon.svg'),
     'BARON_NASHOR': svg_to_png_image('Baron.svg', zoom=0.1),
@@ -32,39 +32,34 @@ epic_monster_icons = {
 
 map_img = mpimg.imread('map.png')
 
-# 1. Riot ID → PUUID 조회
+# 닉네임 + 태그 >> puuid 
 def get_puuid(game_name, tag_line, region="asia"):
     url = f"https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
     response = requests.get(url, headers=HEADERS)
     return response.json().get("puuid", None)
 
-# 2. PUUID → 최근 매치 리스트 조회
+# puuid >> matchid
 def get_recent_matches(puuid, region="asia", count=20):
     url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={count}"
     response = requests.get(url, headers=HEADERS)
     return response.json()
 
-# Match Details API 호출
+# matchid >> match_data
 def get_match_details(match_id, region="asia"):
     url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         return response.json()
-    else:
-        print(f"Error fetching match details: {response.status_code}")
-        return None
 
-# Match Timeline API 호출
+# matchid >> timeline_data
 def get_match_timeline(match_id, region="asia"):
     url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline"
     response = requests.get(url, headers=HEADERS)
     if response.status_code == 200:
         return response.json()
-    else:
-        print(f"Error fetching match timeline: {response.status_code}")
-        return None
 
 
+#유저정보
 def get_player_info(match_details, target_puuid):
     participants = match_details['info']['participants']
     game_mode = match_details['info'].get('gameMode', 'UNKNOWN')
@@ -85,9 +80,9 @@ def get_player_info(match_details, target_puuid):
                 'teamId': player.get('teamId', 'UNKNOWN') 
             }
             return player_info
-    return None
 
 
+#기본 위치 + 특수 조건에 의해 위치 기록되는거 추가
 def extract_detailed_positions(timeline_data, participant_id):
     positions = []
     epic_monster_kills = []  
@@ -104,6 +99,7 @@ def extract_detailed_positions(timeline_data, participant_id):
                 'source': 'frame'
             })
         for event in frame['events']:
+            # 솔로킬 / 일반 킬 / 어시 구분
             if event['type'] == 'CHAMPION_KILL':
                 killer_id = event.get('killerId')
                 assisting_ids = event.get('assistingParticipantIds', [])
@@ -129,7 +125,7 @@ def extract_detailed_positions(timeline_data, participant_id):
     positions_df = pd.DataFrame(positions).sort_values('time').reset_index(drop=True)
 
 
-
+    # 에픽몬스터 잡힐 시간과 가장 가까운 시간에 유저 위치
     for frame in timeline_data['info']['frames']:
         for event in frame['events']:
             if event['type'] == 'ELITE_MONSTER_KILL':
@@ -222,19 +218,16 @@ if __name__ == "__main__":
         player_info = get_player_info(match_details, target_puuid)
         if player_info:
             team_id = player_info.get('teamId', 100)
-            print(f"유저 정보:\n{player_info}")
+            print(f"유저 정보 : {player_info}")
 
             timeline_data = get_match_timeline(match_id)
             if timeline_data:
                 positions_df, epic_monsters_df = extract_detailed_positions(timeline_data, player_info['participantId'])
-                print("\n위치 정보 (시간별):")
+                print("위치 정보 (min):")
                 print(positions_df)
 
-                # 🆕 에픽 몬스터 데이터 포함 시각화
                 plot_maker(positions_df, player_info, map_img, team_id, epic_monsters_df)
-            else:
-                print("타임라인 정보를 불러오지 못했습니다.")
         else:
-            print("유저 정보를 찾을 수 없습니다.")
+            print("유저 정보 x")
     else:
-        print("매치 정보를 불러오지 못했습니다.")
+        print("매치 정보 x")
