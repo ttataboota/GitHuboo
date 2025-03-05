@@ -56,7 +56,7 @@ user_index = 2
 
 
 
-recommended_items_index = np.argsort(-als_predictions[user_index,:])[:20]  # ALS가 예측한 상위 3개 아이템 (인덱스 기반)
+recommended_items_index = np.argsort(-als_predictions[user_index,:])[:20]  # ALS가 예측한 상위 20개 아이템
 
 user_having_item=pivot_df.iloc[user_index][pivot_df.iloc[user_index]>0].keys()
 
