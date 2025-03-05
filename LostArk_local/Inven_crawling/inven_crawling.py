@@ -11,16 +11,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-#최종 데이터가 담길 df
 post_data=pd.DataFrame(columns=['title', 'content', 'comments'])
 
 
-
-# CSV 파일 불러오기
-#file_path = "post_data.csv"
-#post_data = pd.read_csv(file_path)
-
-# HTTP 요청 헤더 설정
 headers = {"User-Agent": "Mozilla/5.0"}
 
 def post_num_date_10chu(page_count):
@@ -32,10 +25,9 @@ def post_num_date_10chu(page_count):
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # 게시글 행 선택
         rows = soup.select("tr.lgtm")
         for row in rows:
-            # 게시글 번호와 날짜 추출
+            # 게시글 번호/  날짜 
             post_number = row.select_one("td.num").get_text(strip=True)
             post_date = row.select_one("td.date").get_text(strip=True)
             # 데이터 저장
@@ -47,14 +39,13 @@ def post_num_date_10chu(page_count):
 
 def post_num_date_30chu(page_count):
     data = []
-    # 페이지별 크롤링
     for i in range(page_count):
-        # 크롤링할 URL
+
         url = f"https://www.inven.co.kr/board/lostark/6271?my=chuchu&p={i+1}"
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # 게시글 행 선택
+
         rows = soup.select("tr.lgtm")
         for row in rows:
             # 게시글 번호와 날짜 추출
@@ -63,7 +54,8 @@ def post_num_date_30chu(page_count):
             # 데이터 저장
             data.append({"post_num": post_number, "post_date": post_date})
 
-    # pandas DataFrame으로 변환
+
+
     post_num_30_df = pd.DataFrame(data)
     return post_num_30_df
 
@@ -75,33 +67,31 @@ def crawl_inven_post(post_num):
     options.add_argument('--no-sandbox')               # 샌드박스 비활성화
     options.add_argument('--disable-gpu') 
 
-    # ChromeDriver 설정
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        # URL 접속
         url = f"https://www.inven.co.kr/board/lostark/6271/{post_num}?my=chu"
         driver.get(url)
 
         # WebDriverWait으로 요소 대기
         wait = WebDriverWait(driver, 10)  # 최대 10초 대기
 
-        # 제목 가져오기
+        # 제목 
         try:
             title_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.articleTitle > h1")))
             title = title_elem.text.strip()
         except:
             title = ""
 
-        # 본문 가져오기
+        # 본문 
         try:
             content_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#powerbbsContent")))
             content = content_elem.text.strip()
         except:
             content = ""
 
-        # 댓글 가져오기
+        # 댓글 << javascript 때문에 가져오기 힘들다..
         comments = []
         try:
             comment_elems = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.comment > span.content.cmtContentOne")))
@@ -167,7 +157,6 @@ post_nums = post_num_date_10chu(5)["post_num"].tolist()
 
 make_post(post_nums)
 
-# 파일 경로 설정 (현재 디렉토리에 저장)
 file_path = "post_data.csv"
 
 # DataFrame 저장
