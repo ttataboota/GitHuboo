@@ -46,6 +46,8 @@ df_exploded = df.explode('items')
 pivot_df = df_exploded.pivot_table(index='group_id', columns='items', aggfunc=lambda x: 1, fill_value=0)
 
 
+
+
 def reco_ALS(pivot_df,factors,regularization,iterations,alpha):
     #희소행렬 변환
     rating_matrix = csr_matrix(pivot_df)
@@ -90,7 +92,7 @@ als_reco=user_item_reco(0,als_predictions)
 # 유사도 기반 추천
 def reco_Pearson(user, df):
 
-    # # 피어슨 상관계수 계산
+    # 피어슨 상관계수 전체 계산 << 이거 써서 한번 계산해두고 나중에 하는건 서비스 할때 필요...지금은 하나씩 계산이 유용할듯
     # user_similarity = df.T.corr(method='pearson')
 
 
@@ -130,14 +132,13 @@ pearson_reco=reco_Pearson(0,pivot_df)
 #     df = df.reset_index().melt(id_vars=['group_id'], var_name='item', value_name='owned')
 #     df = df[df['owned'] == 1]  # 소지한 아이템만 유지
 
-#     # 📌 데이터 변환
+#     # 데이터 변환
 #     df['group_id'] = df['group_id'].astype(str)
 #     df['item'] = df['item'].astype(str)
 
-#     # 📌 훈련/테스트 데이터 분할
+#     # 훈련/테스트 데이터 분할
 #     train, test = train_test_split(df, test_size=0.2, random_state=42)
 
-#     # 📌 특성 벡터화 (One-Hot Encoding)
 #     v = DictVectorizer()
 #     X_train = v.fit_transform(train[['group_id', 'item']].to_dict(orient='records'))
 #     X_test = v.transform(test[['group_id', 'item']].to_dict(orient='records'))
@@ -145,11 +146,11 @@ pearson_reco=reco_Pearson(0,pivot_df)
 #     y_train = np.ones(len(train))
 #     y_test = np.ones(len(test))
 
-#     # 📌 FM 모델 학습
+#     # 모델 하이퍼 파라미터
 #     fm = pylibfm.FM(num_factors=8, task="classification", initial_learning_rate=0.01, num_iter=10, verbose=True)
 #     fm.fit(X_train, y_train)
 
-#     # 📌 예측
+
 #     y_pred = fm.predict(X_test)
 #     y_pred_binary = [1 if p > 0.5 else 0 for p in y_pred]
 #     acc = accuracy_score(y_test, y_pred_binary)
@@ -165,13 +166,13 @@ pearson_reco=reco_Pearson(0,pivot_df)
 #     fm_model.setTest('reco_test.libsvm')
 #     fm_model.predict('model.out', 'reco_output.txt')
 
-#     # 결과 로드 및 정렬
+
 #     y_pred = []
 #     with open('reco_output.txt') as f:
 #         for line in f:
 #             y_pred.append(float(line.strip()))
     
-#     # 추천 아이템 정렬
+
 #     recommended_items = sorted(zip(items, y_pred), key=lambda x: x[1], reverse=True)[:20]
     
 #     return recommended_items

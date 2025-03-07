@@ -1,6 +1,15 @@
 import discord
 from discord.ext import commands
 import numpy as np
+from dotenv import load_dotenv
+import os
+
+# .env 파일 로드
+load_dotenv()
+
+token_key = os.getenv("TOKEN_KEY")
+
+
 
 intents = discord.Intents.default()
 intents.message_content = True 
@@ -84,11 +93,11 @@ async def on_ready():
 
 
 
-@bot.command()
+@bot.command(name="문어")
 async def octo(ctx, now: int, goal: int, now_count: int):
     result = octo_prob(now, goal, now_count)
     await ctx.send(result)
 
 
 
-bot.run("@@@@@@@@@@@@@@@@여기본인봇토큰쓰셈@@@@@@@@@@@@@")
+bot.run(token_key)

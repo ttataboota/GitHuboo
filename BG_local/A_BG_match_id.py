@@ -2,6 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
+import os
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
+
+api_key = os.getenv("API_KEY")
+
 
 
 url = "https://pubg.op.gg/leaderboard"
@@ -21,8 +29,6 @@ if response.status_code == 200:
     user_elements = soup.select("a.leader-board-top3__nickname, a.leader-board__nickname")
     user_names = [user.text.strip() for user in user_elements]
 
-
-api_key='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJhMTA2NjVlMC0wMDI5LTAxM2ItMjE3MS0yNzQ4YzRhN2Q1ZDYiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjYwNzIwMjQyLCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii01NGI0MDRmMy1kZDFhLTQwMzItYWJlMC1mMGU5ZWE3NDQxNzUifQ.wNUumN93avLiYsfnAv3JAJycd4V2jcxWdFOzgqNmVcc'
 
 platform='steam'
 

@@ -3,9 +3,14 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import sys
+import os
+from dotenv import load_dotenv
 
-#내 api key
-api_key='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJhMTA2NjVlMC0wMDI5LTAxM2ItMjE3MS0yNzQ4YzRhN2Q1ZDYiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjYwNzIwMjQyLCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii01NGI0MDRmMy1kZDFhLTQwMzItYWJlMC1mMGU5ZWE3NDQxNzUifQ.wNUumN93avLiYsfnAv3JAJycd4V2jcxWdFOzgqNmVcc'
+# .env 파일 로드
+load_dotenv()
+
+api_key = os.getenv("API_KEY")
+
 
 platform='steam'
 
