@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 from kneed import KneeLocator
 from sklearn.linear_model import LinearRegression

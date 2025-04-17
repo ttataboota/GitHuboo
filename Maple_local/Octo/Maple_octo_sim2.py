@@ -1,4 +1,4 @@
-#%%
+
 import numpy as np
 
 
@@ -47,7 +47,6 @@ def prob_setting_B(n):
 T=prob_setting_B(8)
 
 
-#%%
 
 def octo_prob(now, goal, now_count):
     if now>=goal:
@@ -72,4 +71,4 @@ def octo_prob(now, goal, now_count):
 
 
 
-octo_prob(4,5,98)
+octo_prob(5,7,28)

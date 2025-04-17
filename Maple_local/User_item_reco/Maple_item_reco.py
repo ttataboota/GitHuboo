@@ -1,6 +1,4 @@
 #%%
-import requests
-from bs4 import BeautifulSoup
 import json
 import numpy as np
 import pandas as pd
@@ -17,8 +15,6 @@ import pickle
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.recommendation import ALS
-from datetime import date, timedelta
-from itertools import cycle
 from implicit.als import AlternatingLeastSquares
 from sklearn.metrics import mean_squared_error
 from scipy.stats import pearsonr
@@ -26,28 +22,35 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.datasets import dump_svmlight_file
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-# from pyfm import pylibfm
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.model_selection import train_test_split
-
 
 
 # 파일 불러오기
-with open('data/total_item2.pickle', 'rb') as f:
+with open('data/total_item.pickle', 'rb') as f:
     total_item = pickle.load(f)
-with open('data/user_item2.pickle', 'rb') as f:
-    user_item = pickle.load(f)
-
+with open('data/user_item.pickle', 'rb') as f:
+    user_item_raw = pickle.load(f)
 
 # 데이터 변환 
+df = pd.DataFrame({
+    'user_name': list(user_item_raw.keys()),
+    'items': list(user_item_raw.values())
+})
 
-df = pd.DataFrame({'group_id': range(len(user_item)), 'items': user_item})
 df_exploded = df.explode('items')
-pivot_df = df_exploded.pivot_table(index='group_id', columns='items', aggfunc=lambda x: 1, fill_value=0)
+df_exploded['preset'] = df_exploded.groupby('user_name').cumcount()
 
+df_exploded = df_exploded.explode('items')
+pivot_df_raw = df_exploded.pivot_table(
+    index=['user_name', 'preset'],   # 복합 인덱스: 유저 이름과 해당 프리셋 위치
+    columns='items',                # 아이템 목록(여기서는 리스트가 아니라 미리 explode된 아이템명이어야 함)
+    aggfunc=lambda x: 1,            # 해당 아이템이 있으면 1
+    fill_value=0
+)
 
+pivot_df_name = pivot_df_raw.reset_index() #이중인덱스 제거
+pivot_df = pivot_df_name.drop(columns=['user_name', 'preset']) #학습을 위해 나머지는 쳐내기
 
-
+#%%
 def reco_ALS(pivot_df,factors,regularization,iterations,alpha):
     #희소행렬 변환
     rating_matrix = csr_matrix(pivot_df)
@@ -62,68 +65,117 @@ def reco_ALS(pivot_df,factors,regularization,iterations,alpha):
     return als_predictions
 
 
+def user_item_reco(user_name,als_predictions):
+
+    user_name_index = pivot_df_name[pivot_df_name['user_name'] == user_name].index.tolist()
+    preset=0
+
+    for user_index in user_name_index:
+        recommended_items_index = np.argsort(-als_predictions[user_index,:])[:20]  # ALS가 예측한 상위 20개 아이템
+
+        user_having_item=pivot_df.iloc[user_index][pivot_df.iloc[user_index]>0].keys()
+
+        reco_item_als=[]
+        for i in recommended_items_index:
+            reco_item_als.append(pivot_df.keys()[i])
+
+        reco_item=[item for item in reco_item_als if item not in user_having_item ]
+        preset+=1
+        print(f"프리셋 {preset}번 추천 아이템 : {reco_item}")
+
+    return 0
 
 
 
-
-def user_item_reco(user_index,als_predictions):
-
-    recommended_items_index = np.argsort(-als_predictions[user_index,:])[:20]  # ALS가 예측한 상위 20개 아이템
-
-    user_having_item=pivot_df.iloc[user_index][pivot_df.iloc[user_index]>0].keys()
-
-    reco_item_als=[]
-    for i in recommended_items_index:
-        reco_item_als.append(pivot_df.keys()[i])
-
-    reco_item=[item for item in reco_item_als if item not in user_having_item ]
+als_predictions=reco_ALS(pivot_df,200,0.1,20,2)
+user_item_reco("노엉탁",als_predictions)
 
 
-    return reco_item
-
-
-
-als_predictions=reco_ALS(pivot_df,60,0.1,20,4)
-als_reco=user_item_reco(0,als_predictions)
-
-
-
+#%%
 
 # 유사도 기반 추천
-def reco_Pearson(user, df):
+def reco_Pearson(user_name):
 
     # 피어슨 상관계수 전체 계산 << 이거 써서 한번 계산해두고 나중에 하는건 서비스 할때 필요...지금은 하나씩 계산이 유용할듯
     # user_similarity = df.T.corr(method='pearson')
+    user_name_index = pivot_df_name[pivot_df_name['user_name'] == user_name].index.tolist()
+
+    preset=0
+
+    for user in user_name_index:
+        my_vector = pivot_df.iloc[user]
+
+        similarities = {}
+
+        for other_id in pivot_df.index:
+            if other_id != user:
+                other_vector = pivot_df.loc[other_id]
+                correlation, _ = pearsonr(my_vector, other_vector)
+                if correlation>0:
+                    similarities[other_id] = correlation
+
+        
+
+        # 유저가 소지하지 않은 아이템 필터링
+        user_items = pivot_df.iloc[user]
+        non_owned_items = user_items[user_items == 0].index
+
+        # 추천 점수 계산
+        scores = {}
+        for item in non_owned_items:
+            item_scores = pivot_df.loc[list(similarities.keys()), item] * np.array(list(similarities.values()))
+            scores[item] = item_scores.sum() / np.array(list(similarities.values())).sum()
+
+        # 상위 20개의 아이템 추천
+        recommended_items = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:20]
+        preset+=1
+        print(f"프리셋 {preset}번 추천 아이템 : {[item[0] for item in recommended_items]}")
+
+    return 0
 
 
-    my_vector = pivot_df.loc[user]
+reco_Pearson("고구마유스1")
 
-    similarities = {}
 
-    for other_id in pivot_df.index:
-        if other_id != user:
-            other_vector = pivot_df.loc[other_id]
-            correlation, _ = pearsonr(my_vector, other_vector)
-            if correlation>0:
-                similarities[other_id] = correlation
+def reco_Pearson(user_name):
 
-    
+    # 피어슨 상관계수 전체 계산 << 이거 써서 한번 계산해두고 나중에 하는건 서비스 할때 필요...지금은 하나씩 계산이 유용할듯
+    # user_similarity = df.T.corr(method='pearson')
+    user_name_index = pivot_df_name[pivot_df_name['user_name'] == user_name].index.tolist()
 
-    # 유저가 소지하지 않은 아이템 필터링
-    user_items = df.iloc[user]
-    non_owned_items = user_items[user_items == 0].index
+    preset=0
 
-    # 추천 점수 계산
-    scores = {}
-    for item in non_owned_items:
-        item_scores = df.loc[list(similarities.keys()), item] * np.array(list(similarities.values()))
-        scores[item] = item_scores.sum() / np.array(list(similarities.values())).sum()
+    for user in user_name_index:
+        my_vector = pivot_df.iloc[user]
 
-    # 상위 N개의 아이템 추천
-    recommended_items = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:20]
-    return [item[0] for item in recommended_items]
+        similarities = {}
 
-pearson_reco=reco_Pearson(0,pivot_df)
+        for other_id in pivot_df.index:
+            if other_id != user:
+                other_vector = pivot_df.loc[other_id]
+                correlation, _ = pearsonr(my_vector, other_vector)
+                if correlation>0:
+                    similarities[other_id] = correlation
+
+        
+
+        # 유저가 소지하지 않은 아이템 필터링
+        user_items = pivot_df.iloc[user]
+        non_owned_items = user_items[user_items == 0].index
+
+        # 추천 점수 계산
+        scores = {}
+        for item in non_owned_items:
+            item_scores = pivot_df.loc[list(similarities.keys()), item] * np.array(list(similarities.values()))
+            scores[item] = item_scores.sum() / np.array(list(similarities.values())).sum()
+
+        # 상위 20개의 아이템 추천
+        recommended_items = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:20]
+        preset+=1
+        print(f"프리셋 {preset}번 추천 아이템 : {[item[0] for item in recommended_items]}")
+
+    return 0
+
 
 
 # def reco_FM(group_id, pivot_df):

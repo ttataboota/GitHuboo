@@ -6,14 +6,16 @@ import time
 from itertools import cycle,zip_longest
 import csv
 import numpy as np
+from datetime import datetime
 
 #api_key 매일 갱신 필요
 
 tier='master'
+today=datetime.now().strftime("%m-%Y-%d")
 
-api_key0 = "RGAPI-f93005ae-5c7c-4c44-a937-c652b5db657e" #뿌구리
-api_key1=  "RGAPI-ebb8e04c-18b8-4fdf-8028-95afe524ba21" #쁘댕이
-api_key2=  "RGAPI-7bb1aae7-6ea9-4cd4-82b3-8678c004d821" #겸도리
+api_key0 = "RGAPI-e9fa71b5-3b9c-4ee5-9547-afdd88e2cfa8" #뿌구리
+api_key1=  "RGAPI-c6d2ec09-0e37-46b5-b442-8a3e5dfb1110" #쁘댕이
+api_key2=  "RGAPI-15c6bab8-562f-48eb-85f2-99333f456798" #겸도리
 api_keys=[api_key0,api_key1,api_key2]
 
 headers = {
@@ -35,33 +37,44 @@ class RiotAPI:
 
     def get_user_id(self, tier):
         user_id_api=[]
-        for i in range(3):
+        for i in range(4):
           url = f"https://kr.api.riotgames.com/tft/league/v1/{tier}?queue=RANKED_TFT&api_key={next(self.api_keys)}"
           df = pd.DataFrame(json.loads(requests.get(url, headers=self.headers).text))
           user_id_api.append(json_normalize(df['entries'])[:500])
         print(f"{user_id_api[0].shape[0]}명의 user_id 추출 완료")
+        time.sleep(1)
         return user_id_api
 
     def get_puuid(self, df):
+        time.sleep(1)
+        error_count=0
         puuid_list = []
         for i in range(df[0].shape[0]):
             api_key = next(self.api_keys)  # API 키 선택
             url = f"https://kr.api.riotgames.com/tft/summoner/v1/summoners/{df[i%3].iloc[i, 0]}?api_key={api_key}"
-            puuid = json.loads(requests.get(url, headers=self.headers).text)['puuid']
-            puuid_list.append((puuid, api_key))  # (puuid, 사용한 API 키) 저장
-            if i%100==0:
-               print(f"{i}개의 puuid를 추출 했습니다")
-            time.sleep(0.02)
+            
+            try:
+              puuid = json.loads(requests.get(url, headers=self.headers).text)['puuid']
+              puuid_list.append((puuid, api_key))  # (puuid, 사용한 API 키) 저장
+              if i%100==0:
+                print(f"{i}개의 puuid를 추출 했습니다")
+              time.sleep(0.4)
+            except:
+               error_count+=1
+               if error_count>50:
+                  print("puuid 추출시 50개 이상의 오류 발생 오류 수정 요망.")
+                  break
         
         print("puuid 추출 완료")
         return puuid_list
 
     def get_match_ids(self, puuid_list):
+        time.sleep(1)
         match_ids = []
         for puuid, api_key in puuid_list:  # 저장된 API 키를 사용
             url = f"https://asia.api.riotgames.com/tft/match/v1/matches/by-puuid/{puuid}/ids?start=0&count=20&api_key={api_key}"
             match_ids.extend(json.loads(requests.get(url, headers=self.headers).text))
-            time.sleep(0.02)
+            time.sleep(0.4)
 
         print("match_id 추출 완료")
         match_ids_save = pd.DataFrame(match_ids, columns=["match_id"])
@@ -73,8 +86,6 @@ class RiotAPI:
 #게임 데이터 가져오기
 def user_game_data(matchid):
 
-  global api_key0,api_key1,api_key2,headers,api_keys,tier
-    
   game_data=pd.DataFrame()
   count=0
   error_count=0
@@ -87,22 +98,23 @@ def user_game_data(matchid):
       data_df['game_datetime']=data['game_datetime']
       data_df['game_version']=data['game_version']
       game_data=pd.concat([game_data,data_df])
-      time.sleep(0.02)
+      time.sleep(0.4)
     except:
       error_count+=1
-      print("오류발생")
+      print(f"match_id : {i} 에서 오류발생")
       if error_count==50:
+         print("오류 50개 이상 발생 코드 종료합니다.")
          break
       continue
     count+=1
     if count%1000==0:
        print(f"{count}만큼 추출 완료")
 
-
+  print(f"총 게임 데이터 {len(matchid)}건 중 {count} 건 추출 완료.")
   #저장
   game_data=game_data.reset_index(drop=True)
-  game_data.to_feather(f'data/{tier}_game_data.feather')
-  print(f"{tier}_game data 추출 완료")
+  game_data.to_feather(f'data/{tier}_game_data_{today}.feather')
+  print(f"{tier}_game data_{today} 추출 완료")
 
   return game_data
 
