@@ -5,9 +5,7 @@ import json
 import pandas as pd
 import time
 from datetime import date
-import csv
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pickle
 from datetime import date, timedelta
 from itertools import cycle
@@ -114,15 +112,15 @@ def item_data(cashitem):
 
 
    
-    for name in user_name:
+    for name in user_name: #유저 이름별
         user_item_temp=[]
         
-        for preset in item_preset:
+        for preset in item_preset: #각 유저의 프리셋별
             user_item_preset_temp=[]
 
-            for data in cashitem[name][preset]:
+            for data in cashitem[name][preset]: #투명셋, 반지류,부스트링 제외
                 item_name=data['cash_item_name']
-                if "반지" in item_name or "투명" in item_name:
+                if any(exc in item_name for exc in except_item):
                     continue
                 else:
                     user_item_preset_temp.append(item_name)
@@ -179,7 +177,7 @@ def user_add(user_name):
 #초반 데이터 만들기
 yesterday = date.today() - timedelta(days=1) # 데이터 추출은 코드 실행일 하루전으로 고정.
 user_name=get_user_name(10) # 랭킹 상위 10페이지까지의 유저 추출
-freinds=['혜린핑','고구마유스1','노엉탁','마조리카33','진븀']
+freinds=['마조리카33','진븀']
 user_name=freinds+user_name
 
 #ocid 추출/저장
@@ -201,6 +199,6 @@ with open('data/user_item.pickle', 'wb') as f:
 
 #%%
 # 유저 추가해보기
-user_add("열린자과")
+user_add("사과")
 
 # %%
